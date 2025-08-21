@@ -13,19 +13,17 @@ __license__ = "GPL-3.0"
 import argparse
 import os
 import logging
+import json
 from datetime import datetime
 from pathlib import PurePath
+
+from src.actualize_config import actualize_config
 
 path = PurePath()
 
 def setup_argparse():
     parser = argparse.ArgumentParser()
     # Required positional arguments
-    parser.add_argument(
-        "number",
-        type=int,
-        help="Some number"
-    )
     parser.add_argument(
         "date",
         type=str,
@@ -113,31 +111,26 @@ def setup_logger(args):
         logger.critical("Negative verbosity count")
     logger.debug(f"Logger set up with {cli_handler.level} level")
 
-
 def main(args):
     try:
         with open(args.input, 'r', encoding='utf-8') as input_fs:
-            content = input_fs.read()
-        logger.debug("Input read")
-        parsed_date = datetime.strptime(args.date, args.format)
-        logger.debug("Parsed date: " + datetime.strftime(parsed_date, "%Y-%m-%d"))
-        formatted_date = parsed_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        logger.debug("Date formatted")
-        new_content = content + f'\n{formatted_date} - {args.number}\nEnd'
-        with open(args.output, 'w', encoding='utf-8') as output_fs: # save as UTF-8
+            content = json.loads(input_fs.read())
+        new_content = json.dumps(actualize_config(
+            content, 
+            datetime.strptime(args.date, args.format)
+        ), indent=4)
+        logger.debug(new_content)
+        with open(args.output, 'w', encoding='utf-8') as output_fs:
             output_fs.write(new_content)
-
     except FileNotFoundError:
         logger.critical(f"File not found at {args.input}")
     except Exception as e:
         logger.critical(f"An error occurred: {e}")
 
 
-
 if __name__ == "__main__":
     args = setup_argparse()
     setup_logger(args)
     main(args)
-
 
 
