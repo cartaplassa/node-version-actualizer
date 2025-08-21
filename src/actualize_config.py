@@ -1,6 +1,7 @@
 import subprocess
 import json
 import logging
+import semver
 from datetime import datetime
 
 logger = logging.getLogger('__main__.' + __name__)
@@ -30,14 +31,21 @@ def actualize_package(name, date):
     versions = list(query.items())[2:]
     # TODO error handling
     # [(version, timestemp), (version, timestamp)]
+    iter_version = versions[0][1]
     for index in range(len(versions)):
+        if is_release(versions[index][0]):
+            iter_version = versions[index][0]
         try:
             if datetime.strptime(versions[index + 1][1], NPM_DATE_FMT) > date:
-                return versions[index][0]
+                return iter_version
         except IndexError:
-            return versions[-1][0]
+            return iter_version
 
 
 def query_package(name):
     query = subprocess.run(["npm", "view", name, "time", "--json"], capture_output=True)
     return json.loads(query.stdout)
+
+def is_release(version):
+    ver = semver.Version.parse(version)
+    return True if ver.prerelease is None and ver.build is None else False
